@@ -12,15 +12,40 @@ import os.path
 from os import path
 import matplotlib.pyplot as plt
 
+
+
+def split_array(arr):
+    n = len(arr)
+    q, r = divmod(n, 3)
+    return [arr[:q] , arr[q:q+q+r], arr[q+q+r:]]
+
+
+def set_region_colors(input_file, R_col = "R", G_col = "G", B_col = "B"):    
+    regioncolors = pd.read_excel(input_file, usecols = [R_col, G_col, B_col])
+    regioncolors = regioncolors / 255
+        
+    rgb_colors = []
+
+    for index, row in regioncolors.iterrows():
+        rgb = (row[R_col], row[G_col], row[B_col])
+        rgb_colors.append(rgb)
+    
+    return rgb_colors
+
+
+def unique_list(sequence):
+    seen = set()
+    return [x for x in sequence if not (x in seen or seen.add(x))]
+
+
+
 region_file = r"Z:\NESYS_Lab\PostDoc_project_Bjerke\Manuscripts\WHSv4_Basal ganglia\04_Material\Pax_colors.xlsx"
 
 paxregions = pd.read_excel(region_file)
 pax_region_list = paxregions.Name.values.tolist()
 
 
-for paxregion in pax_region_list:
-    
-
+for paxregion in pax_region_list:    
     
         report_dir = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/nutil_Paxv6Regions/output_dir_" + paxregion + "/Reports/RefAtlasRegions//"   
         reports = glob(report_dir + "*_s*.csv")
@@ -60,9 +85,7 @@ for paxregion in pax_region_list:
         df["Pixel"] = pixel_list
         
         
-        def unique_list(sequence):
-            seen = set()
-            return [x for x in sequence if not (x in seen or seen.add(x))]
+
         
         
         unique_sections = unique_list(section_list)
@@ -82,25 +105,12 @@ for paxregion in pax_region_list:
         df.to_excel(r"Z:\NESYS_Lab\PostDoc_project_Bjerke\Manuscripts\WHSv4_Basal ganglia\04_Material\quantitative_overlap_analysis\\" + paxregion + "_summary.xlsx")
 
 
-def split_array(arr):
-    n = len(arr)
-    q, r = divmod(n, 3)
-    return [arr[:q] , arr[q:q+q+r], arr[q+q+r:]]
+
     
 
 WHS_colors = pd.read_excel("Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/WHS_colors.xlsx")
 
-def set_region_colors(input_file, R_col = "R", G_col = "G", B_col = "B"):    
-    regioncolors = pd.read_excel(input_file, usecols = [R_col, G_col, B_col])
-    regioncolors = regioncolors / 255
-        
-    rgb_colors = []
 
-    for index, row in regioncolors.iterrows():
-        rgb = (row[R_col], row[G_col], row[B_col])
-        rgb_colors.append(rgb)
-    
-    return rgb_colors
 
 
 new_colors = set_region_colors("Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/WHS_colors.xlsx")
