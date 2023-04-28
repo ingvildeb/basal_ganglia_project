@@ -5,7 +5,7 @@ Spyder Editor
 This is a temporary script file.
 """
 
-import create_nut_file_functions as nff
+import nutil_scripts.create_nut_file_functions as nff
 import pandas as pd
 import os
 
