@@ -1,0 +1,3 @@
+[submodule "nutil_scripts"]
+	path = nutil_scripts
+	url = https://github.com/ingvildeb/nutil_scripts
