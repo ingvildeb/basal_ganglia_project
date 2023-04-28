@@ -11,7 +11,7 @@ from glob import glob
 import os.path
 from os import path
 import matplotlib.pyplot as plt
-
+import nutil_scripts.graphing_functions as grf
 
 
 def split_array(arr):
@@ -20,101 +20,128 @@ def split_array(arr):
     return [arr[:q] , arr[q:q+q+r], arr[q+q+r:]]
 
 
-def set_region_colors(input_file, R_col = "R", G_col = "G", B_col = "B"):    
-    regioncolors = pd.read_excel(input_file, usecols = [R_col, G_col, B_col])
-    regioncolors = regioncolors / 255
-        
-    rgb_colors = []
-
-    for index, row in regioncolors.iterrows():
-        rgb = (row[R_col], row[G_col], row[B_col])
-        rgb_colors.append(rgb)
-    
-    return rgb_colors
-
-
 def unique_list(sequence):
     seen = set()
     return [x for x in sequence if not (x in seen or seen.add(x))]
 
 
+other_atlas = "Paxinos_v6"
+other_atlas_regions_file = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/Pax_colors.xlsx"
 
-region_file = r"Z:\NESYS_Lab\PostDoc_project_Bjerke\Manuscripts\WHSv4_Basal ganglia\04_Material\Pax_colors.xlsx"
-
-paxregions = pd.read_excel(region_file)
-pax_region_list = paxregions.Name.values.tolist()
+nutil_out_dir = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/nutil_Paxv6Regions/"
+analysis_dir = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/quantitative_overlap_analysis/"
 
 
-for paxregion in pax_region_list:    
+
+other_atlas_regions = pd.read_excel(other_atlas_regions_file)
+other_atlas_regions_list = list(other_atlas_regions["Name"])
+
+
+WHS_regions_file = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/WHS_colors.xlsx"
+WHS_regions = pd.read_excel(WHS_regions_file, usecols = ["Region"])
+WHS_regions  = list(WHS_regions["Region"])
+
+WHS_colors = grf.set_region_colors(WHS_regions_file, file_type = "excel")
+WHS_colors_dict = dict(zip(WHS_regions, WHS_colors))
+
+## CREATE SUMMARY REPORTS OF SECTIONWISE PROPORTIONS OF ATLAS REGIONS IN WHS REGIONS
+
+for name in other_atlas_regions_list:    
     
-        report_dir = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/nutil_Paxv6Regions/output_dir_" + paxregion + "/Reports/RefAtlasRegions//"   
+        # find all sectionwise reports
+    
+        report_dir = nutil_out_dir + "output_dir_" + name + "/Reports/RefAtlasRegions//"   
         reports = glob(report_dir + "*_s*.csv")
+        
+        # create empty list, to be populated with the section number of the report
+        
+        section_list = []
+        
+        # create empty lists, to be populated with load, region name, object pixel and region pixels from reports
         
         load_list = []
         region_list = []
-        pixel_list = []
-        section_list = []
+        obj_pixel_list = []
+        region_pixel_list = []
         
+        
+        # loop through sectionwise reports
         
         for report in reports:
-            data = pd.read_csv(report, sep=";")
             
-            section = (report.split(sep="_s")[-1]).split(sep=".")[0]
-        
+            #read the report and the section number
+            
+            data = pd.read_csv(report, sep=";")            
+            section = (report.split(sep="_s")[-1]).split(sep=".")[0]            
+            
+            # get the loads, regions, object pixels and region pixels from the sectionwise report
+            
             loads = data["Load"]
             regions = data["Region Name"]
-            pixels = data["Object pixels"]
+            obj_pixels = data["Object pixels"]
+            region_pixels = data["Region pixels"]
+                            
                 
+            for region, load, obj_pixel, region_pixel in zip(regions, loads, obj_pixels, region_pixels):                        
                 
-            for region, load, pixel in zip(regions, loads, pixels):                        
+                # create lists of load, region name, object pixel, section number and region pixels, only if the load is > 0
+                # the section number is appended for the same length as the zipped lists
                 
                 if load > 0:
-                    #print(key, value)
+
                     region_list.append(region)
                     load_list.append(load)
-                    pixel_list.append(pixel)
+                    obj_pixel_list.append(obj_pixel)
                     section_list.append(section)
+                    region_pixel_list.append(region_pixel)
                 
-           
+        # create a dataframe with the selected loads, region names, object pixels and region pixels   
         df = pd.DataFrame()
         
-        df["Section"] = section_list
-        
+        df["Section"] = section_list        
         df["Region"] = region_list
         df["Load"] = load_list
-        df["Pixel"] = pixel_list
-        
+        df["Object pixels"] = obj_pixel_list
+        df["Region pixels"] = region_pixel_list
         
 
-        
-        
+
+        # get a list of the unique section numbers for the data        
         unique_sections = unique_list(section_list)
-        proportion_pax_in_whs_list = []
+        
+        
+        # calculate proportion of the other atlas region that is in each WHS region, weighed by its total size in each section
+        proportion_other_atlas_reg_in_whs_list = []
+        
+        # loop through unique section list
         
         for section in unique_sections:
+            
+            # select all the rows for the section
             selection = df.loc[df["Section"] == section]
-            proportion = selection["Pixel"] / selection["Pixel"].sum()
-            proportion_pax_in_whs_list.append(proportion) 
             
-        
-        proportion_pax_in_whs_df = pd.concat(proportion_pax_in_whs_list)
+            # divide each of the selected object pixel values by the sum of all the object pixels in the section (i.e. size of the area in region x / total size of the area)
+            proportion = selection["Object pixels"] / selection["Object pixels"].sum()
             
-        df["Pax-in-WHS_Proportion"] = proportion_pax_in_whs_df
+            # append proportion dfs to list
+            proportion_other_atlas_reg_in_whs_list.append(proportion) 
+            
+        # create a dataframe of all the proportion dfs in the list, generated in the loop above
+        proportion_other_atlas_reg_in_whs_df = pd.concat(proportion_other_atlas_reg_in_whs_list)
+            
+        # add proportions to the final dataframe
+        df[name + "-in-WHS_Proportion"] = proportion_other_atlas_reg_in_whs_df
         
+      
+        # write dataframe to excel with the region name
+        df.to_excel(analysis_dir + other_atlas + "/" + name + "_summary.xlsx")
         
-        df.to_excel(r"Z:\NESYS_Lab\PostDoc_project_Bjerke\Manuscripts\WHSv4_Basal ganglia\04_Material\quantitative_overlap_analysis\\" + paxregion + "_summary.xlsx")
 
 
 
     
 
-WHS_colors = pd.read_excel("Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/WHS_colors.xlsx")
 
-
-
-
-new_colors = set_region_colors("Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/WHS_colors.xlsx")
-new_color_dict = dict(zip(WHS_colors.Region, new_colors))
 
 
 WHS_regions = []
