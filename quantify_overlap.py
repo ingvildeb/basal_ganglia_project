@@ -40,20 +40,24 @@ WHS_regions_file = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal 
 ## SETUP: COLORS AND REGION NAMES
 
 other_atlas_regions = pd.read_excel(other_atlas_regions_file)
-other_atlas_regions_list = list(other_atlas_regions["Name"])
+other_atlas_region_names = list(other_atlas_regions["Name"])
+other_atlas_regions_abbreviations  = list(other_atlas_regions["Abbreviation"])
 
-WHS_regions = pd.read_excel(WHS_regions_file, usecols = ["Region"])
-WHS_regions  = list(WHS_regions["Region"])
+
+WHS_regions = pd.read_excel(WHS_regions_file)
+WHS_region_names  = list(WHS_regions["Region"])
+WHS_abbreviations = list(WHS_regions["Abbreviation"])
 
 WHS_colors = grf.set_region_colors(WHS_regions_file, file_type = "excel")
-WHS_colors_dict = dict(zip(WHS_regions, WHS_colors))
+WHS_colors_dict = dict(zip(WHS_region_names, WHS_colors))
+WHS_abbrevs_dict = dict(zip(WHS_region_names, WHS_abbreviations))
 
 
 
 
 ## CREATE SUMMARY REPORTS OF SECTIONWISE PROPORTIONS OF ATLAS REGIONS IN WHS REGIONS
 
-for name in other_atlas_regions_list:    
+for name in other_atlas_region_names:    
     
         # find all sectionwise reports
     
@@ -148,13 +152,14 @@ for name in other_atlas_regions_list:
 
     
 
-### CREATE PIE CHARTS OF REGION OVERLAP PER SEGMENT (ROSTRAL, MIDDLE, CAUDAL)
+## SETUP FOR PLOTS AND TABLES
 
-# create a dictionary of summaries needed for the plots
+# create a dictionary of summaries needed for plots and tables
 
 dict_of_summaries = {}
 
-for name in other_atlas_regions_list:
+for name in other_atlas_region_names:
+    
 
     # find and read the summary file    
     summary_path = analysis_dir + other_atlas + "/" + name + "_summary.xlsx"
@@ -184,9 +189,32 @@ for name in other_atlas_regions_list:
     
     dict_of_summaries[name] = summary
     
-# plot the pie charts
+# make a list of all the WHS regions that are included in any summary
 
-for name in other_atlas_regions_list:
+included_WHS_regions = []
+
+for name in other_atlas_region_names:
+        
+    summary = dict_of_summaries[name]  
+    regions = summary["Region"].tolist()
+    
+    included_WHS_regions.append(regions)
+    
+included_WHS_regions_flat = [i for sublist in included_WHS_regions for i in sublist]
+included_unique_WHS_regions = unique_list(included_WHS_regions_flat)
+
+included_abbreviations = []
+for name in included_unique_WHS_regions:
+    included_abbreviation = WHS_abbrevs_dict.get(name)
+    included_abbreviations.append(included_abbreviation)
+    
+
+
+### PLOTS AND TABLES   
+
+# plot pie charts of region overlap per segment (rostral, middle, caudal)
+
+for name in other_atlas_region_names:
     
     summary = dict_of_summaries[name]
     
@@ -222,26 +250,13 @@ for name in other_atlas_regions_list:
     
 
 
-
-included_WHS_regions = []
-
-for name in other_atlas_regions_list:
-        
-    summary = dict_of_summaries[name]  
-    regions = summary["Region"].tolist()
+# create tables of overlap per atlas region in waxholm    
     
-    included_WHS_regions.append(regions)
-    
-WHS_regions_flat = [i for sublist in included_WHS_regions for i in sublist]
-unique_WHS_regions = unique_list(WHS_regions_flat)
-
 table = pd.DataFrame()
-table["Region"] = unique_WHS_regions
-    
-    
+table["Region"] = included_unique_WHS_regions 
+table["Abbreviation"] = included_abbreviations
 
-
-for name in other_atlas_regions_list:
+for name in other_atlas_region_names:
     summary = dict_of_summaries[name]
     
     WHS_regions_in_summary = list(summary["Region"])
@@ -256,8 +271,8 @@ for name in other_atlas_regions_list:
         regindex = table.index[table["Region"] == region]
         table.loc[regindex, name] = proportion
         
-    
-
+table.columns = ["WHS region", "WHS abbreviation", *other_atlas_regions_abbreviations]   
+table.to_excel(analysis_dir + other_atlas + "/" + "summary_all_regions.xlsx")
     
 
 
