@@ -27,9 +27,9 @@ def unique_list(sequence):
 
 ## SETUP: PATHS AND ATLAS NAME
 
-other_atlas = "Paxinos_v6"
-other_atlas_regions_file = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/Pax_colors.xlsx"
-nutil_out_dir = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/nutil_Paxv6Regions/"
+other_atlas = "Swanson_v3"
+other_atlas_regions_file = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/Swa_colors.xlsx"
+nutil_out_dir = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/nutil_Swav3Regions/"
 
 analysis_dir = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/quantitative_overlap_analysis/"
 WHS_regions_file = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/WHS_colors.xlsx"
@@ -272,7 +272,7 @@ for name in other_atlas_region_names:
         table.loc[regindex, name] = proportion
         
 table.columns = ["WHS region", "WHS abbreviation", *other_atlas_regions_abbreviations]   
-table.to_excel(analysis_dir + other_atlas + "/" + "summary_all_regions.xlsx")
+table.to_excel(analysis_dir + other_atlas + "/" + other_atlas + "_summary_all_regions.xlsx")
     
 
 
