@@ -25,24 +25,31 @@ def unique_list(sequence):
     return [x for x in sequence if not (x in seen or seen.add(x))]
 
 
+## SETUP: PATHS AND ATLAS NAME
+
 other_atlas = "Paxinos_v6"
 other_atlas_regions_file = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/Pax_colors.xlsx"
-
 nutil_out_dir = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/nutil_Paxv6Regions/"
+
 analysis_dir = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/quantitative_overlap_analysis/"
+WHS_regions_file = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/WHS_colors.xlsx"
 
 
+
+
+## SETUP: COLORS AND REGION NAMES
 
 other_atlas_regions = pd.read_excel(other_atlas_regions_file)
 other_atlas_regions_list = list(other_atlas_regions["Name"])
 
-
-WHS_regions_file = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/WHS_colors.xlsx"
 WHS_regions = pd.read_excel(WHS_regions_file, usecols = ["Region"])
 WHS_regions  = list(WHS_regions["Region"])
 
 WHS_colors = grf.set_region_colors(WHS_regions_file, file_type = "excel")
 WHS_colors_dict = dict(zip(WHS_regions, WHS_colors))
+
+
+
 
 ## CREATE SUMMARY REPORTS OF SECTIONWISE PROPORTIONS OF ATLAS REGIONS IN WHS REGIONS
 
@@ -121,6 +128,8 @@ for name in other_atlas_regions_list:
             selection = df.loc[df["Section"] == section]
             
             # divide each of the selected object pixel values by the sum of all the object pixels in the section (i.e. size of the area in region x / total size of the area)
+            # this answers the question: "how much of area x in atlas y is located in area x in atlas z", or "how much of the nucleus accumbens shell of paxinos is located in the nucleus accumbens shell of waxholm?"
+            # it does not answer the question of how much of area x in atlas z is occupied by area x in atlas y.
             proportion = selection["Object pixels"] / selection["Object pixels"].sum()
             
             # append proportion dfs to list
@@ -137,124 +146,117 @@ for name in other_atlas_regions_list:
         df.to_excel(analysis_dir + other_atlas + "/" + name + "_summary.xlsx")
         
 
-
-
     
 
+### CREATE PIE CHARTS OF REGION OVERLAP PER SEGMENT (ROSTRAL, MIDDLE, CAUDAL)
 
+# create a dictionary of summaries needed for the plots
 
+dict_of_summaries = {}
 
-WHS_regions = []
+for name in other_atlas_regions_list:
 
-for paxregion in pax_region_list:
-
-        
-    summary = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/quantitative_overlap_analysis/Paxinos_v6/" + paxregion + "_summary.xlsx"
-    summary = pd.read_excel(summary)
+    # find and read the summary file    
+    summary_path = analysis_dir + other_atlas + "/" + name + "_summary.xlsx"
+    summary = pd.read_excel(summary_path)
+     
+    # create a list of all the uniqe section numbers in the summary and divide them into three arrays, defined as rostral, middle and caudal sections
     unique_sections = unique_list(summary["Section"])
     rostral_sections, mid_sections, caudal_sections = split_array(unique_sections)
     
+    
+    # create a list of corresponding segment name for all the sections in the summary file
+    
     segment_list = []
-    for s in summary["Section"]:
-        if s in rostral_sections:
+    
+    for section in summary["Section"]:
+        if section in rostral_sections:
             segment = "Rostral"
-        if s in mid_sections:
+        if section in mid_sections:
             segment = "Middle"
-        if s in caudal_sections:
+        if section in caudal_sections:
             segment = "Caudal"
         segment_list.append(segment)
     
+    # add the list of segment name to the summary dataframe. each row is now assigned to a segment.
     summary["Segment"] = segment_list
+    summary = summary[["Segment", "Section", "Region", "Load", "Object pixels", "Region pixels", name + "-in-WHS_Proportion"]]
     
-    #summary_mean = summary.groupby(["Segment", "Region"]).mean()
-    summary_mean = summary.groupby(["Region"]).mean()
+    dict_of_summaries[name] = summary
+    
+# plot the pie charts
 
+for name in other_atlas_regions_list:
+    
+    summary = dict_of_summaries[name]
+    
+    # calculate the mean of each column, grouped by segment and WHS region
+    summary_mean = summary.groupby(["Segment", "Region"]).mean()       
     summary_mean = summary_mean.reset_index()
+    summary_mean = summary_mean.drop(["Section"], axis=1)
     
-    props = summary_mean["Pax-in-WHS_Proportion"]
-    regs = summary_mean["Region"]
-    #to_plot = summary_mean[["Segment", "Region", "Pax-in-WHS_Proportion"]]
-    to_plot = summary_mean[["Region", "Pax-in-WHS_Proportion"]]
-    to_plot["PaxRegion"] = paxregion
-
-    to_plot.to_excel(r"Z:\NESYS_Lab\PostDoc_project_Bjerke\Manuscripts\WHSv4_Basal ganglia\04_Material\quantitative_overlap_analysis\Paxinos_v6\\" + paxregion + "_summary_segments_combined.xlsx")
     
-    WHS_regions.append(regs.tolist())
-
+    # prepare data to plot
+    
+    props = summary_mean[name + "-in-WHS_Proportion"]
+    regs = summary_mean["Region"]    
+    to_plot = summary_mean[["Segment", "Region", name + "-in-WHS_Proportion"]]
     segments = ["Rostral", "Middle", "Caudal"]
     
+    # plot data for each region with subplots for each segment 
+    
     fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(12, 5))
-
     
-    for segment_i, ax in zip(segments, axs.flat):
-        to_plot_b = to_plot[to_plot['Segment'] == segment_i]
+    for segment, ax in zip(segments, axs.flat):
+        to_plot_b = to_plot[to_plot['Segment'] == segment]
         labels = to_plot_b['Region']
-        texts, autotexts, wedges = ax.pie(to_plot_b['Pax-in-WHS_Proportion'], shadow=False, colors=[new_color_dict[key] for key in labels], startangle=90, textprops=dict(color="black"), autopct='')
+        texts, autotexts, wedges = ax.pie(to_plot_b[name + "-in-WHS_Proportion"], shadow=False, colors=[WHS_colors_dict[key] for key in labels], startangle=90, textprops=dict(color="black"), autopct='')
 
-        ax.set_title(segment_i, size=16, weight="bold", y=-0.05)
-
-    
+        ax.set_title(segment, size=16, weight="bold", y=-0.05)    
         ax.legend(texts, labels, loc=6, mode="expand", bbox_to_anchor=(0, -0.30, 1, 0))
         
     plt.tight_layout()
-    fig.suptitle(paxregion)
-    plt.savefig("Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/quantitative_overlap_analysis/Paxinos_v6/" + paxregion + '_pie.svg', bbox_inches='tight', pad_inches=0.05, dpi=600)
+    fig.suptitle(name)
+    plt.savefig(analysis_dir + other_atlas + "/" + name + '_pie.svg', bbox_inches='tight', pad_inches=0.05, dpi=600)
     plt.show()
+    
 
 
 
+included_WHS_regions = []
 
-
-
-
-
-
-
-
-
-
-
-
-WHS_regions = []
-
-for paxregion in pax_region_list:
+for name in other_atlas_regions_list:
         
-    report = r"Z:\NESYS_Lab\PostDoc_project_Bjerke\Manuscripts\WHSv4_Basal ganglia\04_Material\quantitative_overlap_analysis\Paxinos_v6\\" + paxregion + "_summary_segments_combined.xlsx"
-    report = pd.read_excel(report)
+    summary = dict_of_summaries[name]  
+    regions = summary["Region"].tolist()
     
-    regions = report["Region"].tolist()
+    included_WHS_regions.append(regions)
     
-    WHS_regions.append(regions)
-
-
-
-
-WHS_regions_flat = [i for sublist in WHS_regions for i in sublist]
+WHS_regions_flat = [i for sublist in included_WHS_regions for i in sublist]
 unique_WHS_regions = unique_list(WHS_regions_flat)
 
-table = pd.DataFrame(unique_WHS_regions)
-table.columns = ["Region"]
+table = pd.DataFrame()
+table["Region"] = unique_WHS_regions
+    
+    
 
 
-for paxregion in pax_region_list:
+for name in other_atlas_regions_list:
+    summary = dict_of_summaries[name]
     
-    report = r"Z:\NESYS_Lab\PostDoc_project_Bjerke\Manuscripts\WHSv4_Basal ganglia\04_Material\quantitative_overlap_analysis\Paxinos_v6\\" + paxregion + "_summary_segments_combined.xlsx"
-    report = pd.read_excel(report)
-    
-    regs_in_report = report["Region"].tolist()
-    
-    table[paxregion] = ""
-    
-    for reg in regs_in_report:
-        selection = report.loc[report["Region"] == reg]
-        value = selection["Pax-in-WHS_Proportion"]
-        value = float(value)
-        paxreg = selection["PaxRegion"]
-
-                
+    WHS_regions_in_summary = list(summary["Region"])
+    WHS_regions_in_summary = unique_list(WHS_regions_in_summary)
+    total_object_pixels = summary["Object pixels"].sum()
+    table[name] = ""
+       
+    for region in WHS_regions_in_summary:
+        selection = summary.loc[summary["Region"] == region]
+        proportion = selection["Object pixels"].sum() / total_object_pixels
+        proportion = float(proportion)
+        regindex = table.index[table["Region"] == region]
+        table.loc[regindex, name] = proportion
         
-        regindex = table.index[table["Region"] == reg]
-        table.loc[regindex, paxreg] = value
+    
 
     
 
