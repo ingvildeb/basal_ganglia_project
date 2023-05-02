@@ -212,33 +212,59 @@ for name in included_unique_WHS_regions:
 
 ### PLOTS AND TABLES   
 
-# plot pie charts of region overlap per segment (rostral, middle, caudal)
 
+# create summaries of segment-wise proportions, to be used in pie charts
 for name in other_atlas_region_names:
     
     summary = dict_of_summaries[name]
     
-    # calculate the mean of each column, grouped by segment and WHS region
-    summary_mean = summary.groupby(["Segment", "Region"]).mean()       
-    summary_mean = summary_mean.reset_index()
-    summary_mean = summary_mean.drop(["Section"], axis=1)
+    # calculate the sum of each column, grouped by segment and WHS region (this sums the object pixels for all section in a segment / region)
+    summary_sum = summary.groupby(["Segment", "Region"]).sum()  
+    summary_sum = summary_sum.reset_index()
+    summary_sum = summary_sum.drop(["Section"], axis=1)
     
+    # calculate proportions per segment
     
-    # prepare data to plot
-    
-    props = summary_mean[name + "-in-WHS_Proportion"]
-    regs = summary_mean["Region"]    
-    to_plot = summary_mean[["Segment", "Region", name + "-in-WHS_Proportion"]]
     segments = ["Rostral", "Middle", "Caudal"]
     
-    # plot data for each region with subplots for each segment 
+    list_of_proportions = []
+    list_of_names = []
+    list_of_segments = []
+    
+    for segment in segments:
+        
+        selection = summary_sum[summary_sum["Segment"] == segment]
+        total_object_pixels = selection["Object pixels"].sum()
+        proportions = (selection["Object pixels"] / total_object_pixels)
+        region = selection["Region"]
+        segment_n = selection["Segment"]
+        proportions = proportions.tolist()
+        list_of_proportions.append(proportions)
+        list_of_names.append(region)
+        list_of_segments.append(segment_n)
+        
+
+    list_of_proportions = [i for sublist in list_of_proportions for i in sublist]
+    list_of_names = [i for sublist in list_of_names for i in sublist]
+    list_of_segments = [i for sublist in list_of_segments for i in sublist]
+    
+    segmentwise_proportions = pd.DataFrame()
+    segmentwise_proportions["Segment"] = list_of_segments
+    segmentwise_proportions["Region"] = list_of_names
+    segmentwise_proportions["Proportion"] = list_of_proportions
+   
+    segmentwise_proportions.to_excel(analysis_dir + other_atlas + "/" + name + "_summary_per_segment.xlsx")    
+
+
+# plot pie charts of region overlap per segment (rostral, middle, caudal)
     
     fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(12, 5))
     
     for segment, ax in zip(segments, axs.flat):
-        to_plot_b = to_plot[to_plot['Segment'] == segment]
+        
+        to_plot_b = segmentwise_proportions[segmentwise_proportions['Segment'] == segment]
         labels = to_plot_b['Region']
-        texts, autotexts, wedges = ax.pie(to_plot_b[name + "-in-WHS_Proportion"], shadow=False, colors=[WHS_colors_dict[key] for key in labels], startangle=90, textprops=dict(color="black"), autopct='')
+        texts, autotexts, wedges = ax.pie(to_plot_b["Proportion"], shadow=False, colors=[WHS_colors_dict[key] for key in labels], startangle=90, textprops=dict(color="black"), autopct='')
 
         ax.set_title(segment, size=16, weight="bold", y=-0.05)    
         ax.legend(texts, labels, loc=6, mode="expand", bbox_to_anchor=(0, -0.30, 1, 0))
@@ -249,8 +275,10 @@ for name in other_atlas_region_names:
     plt.show()
     
 
+    
 
-# create tables of overlap per atlas region in waxholm    
+
+# create tables of overlap per atlas region in waxholm  (all sections and segments analyzed as one)   
     
 table = pd.DataFrame()
 table["Region"] = included_unique_WHS_regions 
