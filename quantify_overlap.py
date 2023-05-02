@@ -27,9 +27,9 @@ def unique_list(sequence):
 
 ## SETUP: PATHS AND ATLAS NAME
 
-other_atlas = "Swanson_v3"
-other_atlas_regions_file = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/Swa_colors.xlsx"
-nutil_out_dir = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/nutil_Swav3Regions/"
+other_atlas = "Paxinos_v6"
+other_atlas_regions_file = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/Pax_colors.xlsx"
+nutil_out_dir = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/nutil_Paxv6Regions/"
 
 analysis_dir = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/quantitative_overlap_analysis/"
 WHS_regions_file = "Z:/NESYS_Lab/PostDoc_project_Bjerke/Manuscripts/WHSv4_Basal ganglia/04_Material/WHS_colors.xlsx"
